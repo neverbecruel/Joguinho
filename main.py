@@ -20,6 +20,8 @@ class Jogador:
         self.tempo_ultima_morte = 0
         self.moedas_coletadas = 0
 
+
+
     def mover(self, keys):
         if keys[pygame.K_a] and self.rect.x > 0:
             self.rect.x -= self.velocidade
@@ -112,7 +114,27 @@ class Coin:
     def start(self):
         if self.rect.colliderect(jogador1.rect):
             jogador1.coletada()
-            print("coletou")
+            self.rect.x = 9302382
+            self.rect.y = 9302382
+
+
+class Plataforma:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color: tuple = (0, 0, 0)
+        self.x = x
+        self.y = y
+
+    def colide_com_jogador(self, jogador_rect):
+        return self.rect.colliderect(jogador_rect)
+
+    def pulo_funfou(self, player):
+        if self.rect.colliderect(player):
+            if self.rect.top == player.rect.bottom:
+                jogador1.velocidade_vertical = 0
+            print("PLAYER COLIDIU COM A PLATAFORMA")
+
+
 
 
 # Inicialização
@@ -127,6 +149,7 @@ floor = Floor()
 obstaculo1 = Obstaculo()
 HUB_COINS = Coin(largura_tela - 60, 12)
 COIN1 = Coin(largura_tela - 90, altura_tela - 65)
+plt1 = Plataforma(largura_tela - 150, altura_tela - 100, 150, 20 )
 
 # Loop principal
 while True:
@@ -138,6 +161,7 @@ while True:
     screen.fill((255, 255, 255))
     screen.blit(fundo, (0, 0))
     pygame.draw.rect(screen, floor.color, floor.rect)  # desenha o chão
+    pygame.draw.rect(screen, plt1.color, plt1.rect)
     pygame.draw.rect(screen, jogador1.color, jogador1.rect)  # desenha o player
     screen.blit(obstaculo1.image, obstaculo1.rect)  # desenha o obstaculo
     screen.blit(HUB_COINS.image, HUB_COINS.rect)
@@ -149,6 +173,7 @@ while True:
     jogador1.morte()
     jogador1.desenhar_coracoes()
     jogador1.show_coins()
+    plt1.pulo_funfou(jogador1)
     COIN1.start()
 
     pygame.display.flip()
