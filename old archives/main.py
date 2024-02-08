@@ -1,6 +1,5 @@
 import pygame
-from pygame.locals import KEYDOWN, K_SPACE
-from time import sleep, time
+from time import sleep
 
 largura_tela = 800
 altura_tela = 600
@@ -13,41 +12,57 @@ class Jogador:
         self.rect = pygame.Rect(10, altura_tela - 100, 15, 30)
         self.color = (255, 0, 0)
         self.velocidade = 4
-        self.velocidade_vertical = 0
+        self.velocidade_vertical = gravidade
         self.pulando = False
         self.vidas = 3
         self.coracao = pygame.transform.scale(pygame.image.load("static/coracao.png"), (20, 20))
         self.tempo_ultima_morte = 0
         self.moedas_coletadas = 0
+        self.esta_no_chao = False
 
-
-
-    def mover(self, keys):
+    def mover(self, keys, flr):
         if keys[pygame.K_a] and self.rect.x > 0:
             self.rect.x -= self.velocidade
         if keys[pygame.K_d] and self.rect.x < largura_tela - self.rect.width:
             self.rect.x += self.velocidade
 
-        if keys[pygame.K_w] and not self.pulando:
-            self.velocidade_vertical = impulso_pulo
+        if keys[pygame.K_w] and not self.pulando and self.esta_no_chao:
             self.pulando = True
+            self.velocidade_vertical = impulso_pulo
 
-        if not self.esta_no_chao():
-            self.velocidade_vertical += gravidade
+        if keys[pygame.K_w]:
+            print("Voce pressionou WWWW")
+            print(self.pulando, self.esta_no_chao)
+
+
+        if not self.esta_no_chao:
+            # Verificar colisão com piso
+            for chao in flr:
+                if self.rect.colliderect(chao.rect) and not self.pulando:
+                    self.velocidade_vertical = 0
+                    self.esta_no_chao = True
+                    self.pulando = False
+                    break
+            else:
+                self.velocidade_vertical += gravidade
         else:
             self.velocidade_vertical = 0
             self.pulando = False
 
         self.rect.y += self.velocidade_vertical
 
+    def isFalling(self, flr):
+        self.esta_no_chao = False
+        for chao in flr:
+            if self.rect.colliderect(chao.rect):
+                self.esta_no_chao = True
+                return
+
     def coletada(self):
         self.moedas_coletadas += 1
 
     def reset_moedas(self):
         self.moedas_coletadas = 0
-
-    def esta_no_chao(self):
-        return self.rect.colliderect(floor.rect) and self.velocidade_vertical >= 0
 
     def morte(self):
         if self.rect.colliderect(obstaculo1.rect):
@@ -70,7 +85,7 @@ class Jogador:
         screen.blit(mensagem, mensagem_rect)
         pygame.display.flip()
         sleep(2)
-        self.vidas = 3  # Restaura as vidas ao reiniciar o jogo
+        self.vidas = 3
         self.reset_moedas()
 
     def show_coins(self):
@@ -89,9 +104,9 @@ class Jogador:
 
 
 class Floor:
-    def __init__(self):
+    def __init__(self, r: int, g: int, b: int):
         self.rect = pygame.Rect(0, altura_tela - 40, largura_tela, 40)
-        self.color = (0, 255, 0)
+        self.color = (r, g, b)
 
 
 class Obstaculo:
@@ -103,40 +118,6 @@ class Obstaculo:
         self.rect.y = altura_tela - 55
 
 
-class Coin:
-    def __init__(self, x, y):
-        self.image = pygame.image.load("static/COIN.png").convert_alpha()
-        self.image = pygame.transform.scale(self.image,(20, 20))
-        self.rect = self.image.get_rect()
-        self.rect.x = x # largura_tela - 90
-        self.rect.y = y # altura_tela - 95
-
-    def start(self):
-        if self.rect.colliderect(jogador1.rect):
-            jogador1.coletada()
-            self.rect.x = 9302382
-            self.rect.y = 9302382
-
-
-class Plataforma:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color: tuple = (0, 0, 0)
-        self.x = x
-        self.y = y
-
-    def colide_com_jogador(self, jogador_rect):
-        return self.rect.colliderect(jogador_rect)
-
-    def pulo_funfou(self, player):
-        if self.rect.colliderect(player):
-            if self.rect.top == player.rect.bottom:
-                jogador1.velocidade_vertical = 0
-            print("PLAYER COLIDIU COM A PLATAFORMA")
-
-
-
-
 # Inicialização
 pygame.init()
 screen = pygame.display.set_mode((largura_tela, altura_tela))
@@ -145,11 +126,11 @@ fundo = pygame.image.load("static/landscape.jpg")
 fundo = pygame.transform.scale(fundo, (largura_tela, altura_tela))
 
 jogador1 = Jogador()
-floor = Floor()
+floor = Floor(0, 255, 0)
+plataforma = Floor(0, 0, 0)
+floors = [floor, plataforma]
+plataforma.rect = pygame.Rect(largura_tela - 150, altura_tela - 100, 150, 20)
 obstaculo1 = Obstaculo()
-HUB_COINS = Coin(largura_tela - 60, 12)
-COIN1 = Coin(largura_tela - 90, altura_tela - 65)
-plt1 = Plataforma(largura_tela - 150, altura_tela - 100, 150, 20 )
 
 # Loop principal
 while True:
@@ -161,20 +142,16 @@ while True:
     screen.fill((255, 255, 255))
     screen.blit(fundo, (0, 0))
     pygame.draw.rect(screen, floor.color, floor.rect)  # desenha o chão
-    pygame.draw.rect(screen, plt1.color, plt1.rect)
+    pygame.draw.rect(screen, plataforma.color, plataforma.rect)
     pygame.draw.rect(screen, jogador1.color, jogador1.rect)  # desenha o player
     screen.blit(obstaculo1.image, obstaculo1.rect)  # desenha o obstaculo
-    screen.blit(HUB_COINS.image, HUB_COINS.rect)
-    screen.blit(COIN1.image, COIN1.rect)
-
 
     keys = pygame.key.get_pressed()
-    jogador1.mover(keys)
+    jogador1.mover(keys, floors)
     jogador1.morte()
     jogador1.desenhar_coracoes()
     jogador1.show_coins()
-    plt1.pulo_funfou(jogador1)
-    COIN1.start()
+    jogador1.isFalling(floors)
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
